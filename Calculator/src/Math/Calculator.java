@@ -36,30 +36,37 @@ public class Calculator extends Application {
   private Op curOp   = Op.NOOP;
   private Op stackOp = Op.NOOP;
 
+  private Label errorLabel;
+  
   public static void main(String[] args) { launch(args); }
 
   @Override public void start(Stage stage) {
+	value.set(0);
+	errorLabel = new Label("Error can't divide by 0");
+	errorLabel.setStyle("-fx-text-fill: red;");
+	errorLabel.setVisible(false);
     final TextField screen  = createScreen();
+    final TextField memoryScreen = createMemoryScreen();
     final TilePane  buttons = createButtons();
 
     stage.setTitle("Fred Blogg’s Calculator");
     stage.initStyle(StageStyle.UTILITY);
     stage.setResizable(false);
-    stage.setScene(new Scene(createLayout(screen, buttons)));
+    stage.setScene(new Scene(createLayout(errorLabel, screen, memoryScreen, buttons)));
     stage.show();
   }
 
-  private VBox createLayout(TextField screen, TilePane buttons) {
+  private VBox createLayout(Label errorLabel, TextField screen, TextField memoryScreen, TilePane buttons) {
     final VBox layout = new VBox(20);
     layout.setAlignment(Pos.CENTER);
     layout.setStyle("-fx-background-color: grey; -fx-padding: 20; -fx-font-size: 20;");
-    layout.getChildren().setAll(screen, buttons);
+    layout.getChildren().setAll(errorLabel, screen, memoryScreen, buttons);
     handleAccelerators(layout);
     screen.prefWidthProperty().bind(buttons.widthProperty());
     return layout;
   }
 
-  private void handleAccelerators(VBox layout) {
+  private void handleAccelerators(VBox layout) {	 
     layout.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
       @Override
       public void handle(KeyEvent keyEvent) {
@@ -78,6 +85,15 @@ public class Calculator extends Application {
     screen.textProperty().bind(Bindings.format("%.0f", value));
     return screen;
   }
+  
+  private TextField createMemoryScreen() {
+	    final TextField screen = new TextField();
+	    screen.setStyle("-fx-background-color: pink;");
+	    screen.setAlignment(Pos.BASELINE_LEFT);
+	    screen.setEditable(false);
+	    screen.textProperty().bind(Bindings.format("%.0f", memoryValue));
+	    return screen;
+	  }
 
   private TilePane createButtons() {
     TilePane buttons = new TilePane();
@@ -104,13 +120,13 @@ public class Calculator extends Application {
         clearButton(button);
       else if ("=".equals(buttonIcon)) 
         equalsButton(button);
-      else if ("m".equals(buttonIcon)) 
+      else if ("M".equals(buttonIcon)) 
     	  msetButton(button);
-      else if ("m+".equals(buttonIcon))
+      else if ("M+".equals(buttonIcon))
     	  mplusButton(button);
-      else if ("m-".equals(buttonIcon))
+      else if ("M-".equals(buttonIcon))
     	  mminiusButton(button);
-      else if ("mc".equals(buttonIcon))
+      else if ("MC".equals(buttonIcon))
     	  mclearButton(button);
     }
 
@@ -136,7 +152,7 @@ public class Calculator extends Application {
     button.setStyle("-fx-base: lightgray;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
-      public void handle(ActionEvent actionEvent) {
+      public void handle(ActionEvent actionEvent) {    	  
         curOp = triggerOp.get();
       }
     });
@@ -150,28 +166,30 @@ public class Calculator extends Application {
     return button;
   }
 
-  private void numericButton(final String buttonValue, Button button) {
-    button.setOnAction(new EventHandler<ActionEvent>() {
-      @Override
-      public void handle(ActionEvent actionEvent) {
-        if (curOp == Op.NOOP) 
-        	if(String.valueOf(value.get()).length() != 7)
-        		value.set((float) Math.floor(value.get() * 10 + Integer.parseInt(buttonValue)));         
-        else {
-          stackValue.set(value.get());
-          value.set(Integer.parseInt(buttonValue));
-          stackOp = curOp;
-          curOp = Op.NOOP;
-        }
-      }
-    });
-  }
+  private void numericButton(final String s, Button button) {	 
+	    button.setOnAction(new EventHandler<ActionEvent>() {
+	      @Override
+	      public void handle(ActionEvent actionEvent) {
+	    	  errorLabel.setVisible(false);
+	        if (curOp == Op.NOOP) {
+	        	if(String.valueOf(value.get()).length() != 7)
+	        		value.set(value.get() * 10 + Integer.parseInt(s));
+	        } else {
+	          stackValue.set(value.get());
+	          value.set(Integer.parseInt(s));
+	          stackOp = curOp;
+	          curOp = Op.NOOP;
+	        }
+	      }
+	    });
+	  }
 
   private void clearButton(Button button) {
     button.setStyle("-fx-base: mistyrose;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
       public void handle(ActionEvent actionEvent) {
+    	errorLabel.setVisible(false);
         value.set(0);
       }
     });
@@ -180,13 +198,18 @@ public class Calculator extends Application {
   private void equalsButton(Button button) {
     button.setStyle("-fx-base: ghostwhite;");
     button.setOnAction(new EventHandler<ActionEvent>() {
-      @Override
+      @SuppressWarnings("incomplete-switch")
       public void handle(ActionEvent actionEvent) {
         switch (stackOp) {
           case ADD:      value.set(basicOperations.addFunction(stackValue.get(),value.get())); break;
           case SUBTRACT: value.set(basicOperations.subtractionFunction(stackValue.get(),value.get())); break;
           case MULTIPLY: value.set(basicOperations.mutlplicationFunction(stackValue.get(),value.get())); break;
-          case DIVIDE:   value.set(basicOperations.divisionFunction(stackValue.get(),value.get())); break;
+          case DIVIDE:  
+        	  if(value.get() == 0) {
+        		  errorLabel.setVisible(true);
+        		  break;
+        	  }
+        	  value.set(basicOperations.divisionFunction(stackValue.get(),value.get())); break;
         }
       }
     });
