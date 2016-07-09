@@ -19,7 +19,8 @@ import java.util.Map;
 // a simple JavaFX calculator.
 public class Calculator extends Application {
   private static final String[][] template = {
-      { "7", "8", "9", "/" },
+	  { "M+", "M-", "M", "MC"},
+	  { "7", "8", "9", "/" },
       { "4", "5", "6", "*" },
       { "1", "2", "3", "-" },
       { "0", "c", "=", "+" }
@@ -29,9 +30,9 @@ public class Calculator extends Application {
   private BasicOperations basicOperations = new BasicOperations();
   private FloatProperty stackValue = new SimpleFloatProperty();
   private FloatProperty value = new SimpleFloatProperty();
-
+  private FloatProperty memoryValue = new SimpleFloatProperty();
+  
   private enum Op { NOOP, ADD, SUBTRACT, MULTIPLY, DIVIDE }
-
   private Op curOp   = Op.NOOP;
   private Op stackOp = Op.NOOP;
 
@@ -41,7 +42,7 @@ public class Calculator extends Application {
     final TextField screen  = createScreen();
     final TilePane  buttons = createButtons();
 
-    stage.setTitle("Calc");
+    stage.setTitle("Fred Blogg’s Calculator");
     stage.initStyle(StageStyle.UTILITY);
     stage.setResizable(false);
     stage.setScene(new Scene(createLayout(screen, buttons)));
@@ -63,9 +64,8 @@ public class Calculator extends Application {
       @Override
       public void handle(KeyEvent keyEvent) {
         Button activated = accelerators.get(keyEvent.getText());
-        if (activated != null) {
+        if (activated != null) 
           activated.fire();
-        }
       }
     });
   }
@@ -84,45 +84,55 @@ public class Calculator extends Application {
     buttons.setVgap(7);
     buttons.setHgap(7);
     buttons.setPrefColumns(template[0].length);
-    for (String[] r: template) {
-      for (String s: r) {
-        buttons.getChildren().add(createButton(s));
-      }
+    for (String[] row: template) {
+      for (String buttonIcon: row) 
+        buttons.getChildren().add(createButton(buttonIcon));      
     }
     return buttons;
   }
 
-  private Button createButton(final String s) {
-    Button button = makeStandardButton(s);
+  private Button createButton(final String buttonIcon) {
+    Button button = standardButton(buttonIcon);
 
-    if (s.matches("[0-9]")) {
-      makeNumericButton(s, button);
-    } else {
-      final ObjectProperty<Op> triggerOp = setOperator(s);
-      if (triggerOp.get() != Op.NOOP) {
-        makeOperandButton(button, triggerOp);
-      } else if ("c".equals(s)) {
-        makeClearButton(button);
-      } else if ("=".equals(s)) {
-        makeEqualsButton(button);
-      }
+    if (buttonIcon.matches("[0-9]")) 
+      numericButton(buttonIcon, button);
+    else {
+      final ObjectProperty<Op> operation = setOperator(buttonIcon);
+      if (operation.get() != Op.NOOP) 
+    	  operationButton(button, operation);
+      else if ("c".equals(buttonIcon)) 
+        clearButton(button);
+      else if ("=".equals(buttonIcon)) 
+        equalsButton(button);
+      else if ("m".equals(buttonIcon)) 
+    	  msetButton(button);
+      else if ("m+".equals(buttonIcon))
+    	  mplusButton(button);
+      else if ("m-".equals(buttonIcon))
+    	  mminiusButton(button);
+      else if ("mc".equals(buttonIcon))
+    	  mclearButton(button);
     }
 
     return button;
   }
 
-  private ObjectProperty<Op> setOperator(String s) {
-    final ObjectProperty<Op> triggerOp = new SimpleObjectProperty<>(Op.NOOP);
-    switch (s) {
-      case "+": triggerOp.set(Op.ADD);      break;
-      case "-": triggerOp.set(Op.SUBTRACT); break;
-      case "*": triggerOp.set(Op.MULTIPLY); break;
-      case "/": triggerOp.set(Op.DIVIDE);   break;
+  private ObjectProperty<Op> setOperator(String operation) {
+    final ObjectProperty<Op> operationTrigger = new SimpleObjectProperty<>(Op.NOOP);
+    switch (operation) {
+      case "+": operationTrigger.set(Op.ADD);
+      	break;
+      case "-": operationTrigger.set(Op.SUBTRACT); 
+      	break;
+      case "*": operationTrigger.set(Op.MULTIPLY); 
+      	break;
+      case "/": operationTrigger.set(Op.DIVIDE);   
+      	break;
     }
-    return triggerOp;
+    return operationTrigger;
   }
 
-  private void makeOperandButton(Button button, final ObjectProperty<Op> triggerOp) {
+  private void operationButton(Button button, final ObjectProperty<Op> triggerOp) {
     button.setStyle("-fx-base: lightgray;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
@@ -132,7 +142,7 @@ public class Calculator extends Application {
     });
   }
 
-  private Button makeStandardButton(String s) {
+  private Button standardButton(String s) {
     Button button = new Button(s);
     button.setStyle("-fx-base: beige;");
     accelerators.put(s, button);
@@ -140,15 +150,16 @@ public class Calculator extends Application {
     return button;
   }
 
-  private void makeNumericButton(final String s, Button button) {
+  private void numericButton(final String buttonValue, Button button) {
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
       public void handle(ActionEvent actionEvent) {
-        if (curOp == Op.NOOP) {
-          value.set(value.get() * 10 + Integer.parseInt(s));
-        } else {
+        if (curOp == Op.NOOP) 
+        	if(String.valueOf(value.get()).length() != 7)
+        		value.set((float) Math.floor(value.get() * 10 + Integer.parseInt(buttonValue)));         
+        else {
           stackValue.set(value.get());
-          value.set(Integer.parseInt(s));
+          value.set(Integer.parseInt(buttonValue));
           stackOp = curOp;
           curOp = Op.NOOP;
         }
@@ -156,7 +167,7 @@ public class Calculator extends Application {
     });
   }
 
-  private void makeClearButton(Button button) {
+  private void clearButton(Button button) {
     button.setStyle("-fx-base: mistyrose;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
@@ -166,7 +177,7 @@ public class Calculator extends Application {
     });
   }
 
-  private void makeEqualsButton(Button button) {
+  private void equalsButton(Button button) {
     button.setStyle("-fx-base: ghostwhite;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
@@ -180,4 +191,45 @@ public class Calculator extends Application {
       }
     });
   }
+  
+  private void mplusButton(Button button){
+	  button.setStyle("-fx-base: ghostwhite;");
+	    button.setOnAction(new EventHandler<ActionEvent>() {
+	      @Override
+	      public void handle(ActionEvent actionEvent) {
+	          memoryValue.set(basicOperations.mplusFunction(value.get()));
+	      }
+	    });
+  }
+  
+  private void mminiusButton(Button button){
+	  button.setStyle("-fx-base: ghostwhite;");
+	    button.setOnAction(new EventHandler<ActionEvent>() {
+	      @Override
+	      public void handle(ActionEvent actionEvent) {
+	          memoryValue.set(basicOperations.mminiusFunction(value.get()));
+	      }
+	    });
+  }
+  
+  private void mclearButton(Button button){
+	  button.setStyle("-fx-base: ghostwhite;");
+	    button.setOnAction(new EventHandler<ActionEvent>() {
+	      @Override
+	      public void handle(ActionEvent actionEvent) {
+	          memoryValue.set(basicOperations.mclearFunction());
+	      }
+	    });
+  }
+  
+  private void msetButton(Button button){
+	  button.setStyle("-fx-base: ghostwhite;");
+	    button.setOnAction(new EventHandler<ActionEvent>() {
+	      @Override
+	      public void handle(ActionEvent actionEvent) {
+	          memoryValue.set(basicOperations.msetFunction(value.get()));
+	      }
+	    });
+  }
+  
 }
