@@ -1,7 +1,6 @@
 package Math;
 
 import javafx.application.Application;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -20,47 +19,46 @@ import java.util.Map;
 public class Calculator extends Application {
   private static final String[][] template = {
 	  { "M+", "M-", "M", "MC"},
+	  {"","","","C"},
 	  { "7", "8", "9", "/" },
       { "4", "5", "6", "*" },
       { "1", "2", "3", "-" },
-      { "0", "c", "=", "+" }
+      { "0", ".", "=", "+" }
   };
 
   private final Map<String, Button> accelerators = new HashMap<>();
   private BasicOperations basicOperations = new BasicOperations();
   private FloatProperty stackValue = new SimpleFloatProperty();
-  private FloatProperty value = new SimpleFloatProperty();
-  private FloatProperty memoryValue = new SimpleFloatProperty();
+  private StringProperty value = new SimpleStringProperty();
+  private StringProperty memoryValue = new SimpleStringProperty();
   
   private enum Op { NOOP, ADD, SUBTRACT, MULTIPLY, DIVIDE }
   private Op curOp   = Op.NOOP;
   private Op stackOp = Op.NOOP;
-
-  private Label errorLabel;
   
+  private boolean clearAfterEquals = false;
+
   public static void main(String[] args) { launch(args); }
 
   @Override public void start(Stage stage) {
-	value.set(0);
-	errorLabel = new Label("Error can't divide by 0");
-	errorLabel.setStyle("-fx-text-fill: red;");
-	errorLabel.setVisible(false);
+	value.set("");
+	memoryValue.set("");
     final TextField screen  = createScreen();
     final TextField memoryScreen = createMemoryScreen();
     final TilePane  buttons = createButtons();
-
+    
     stage.setTitle("Fred Blogg’s Calculator");
     stage.initStyle(StageStyle.UTILITY);
     stage.setResizable(false);
-    stage.setScene(new Scene(createLayout(errorLabel, screen, memoryScreen, buttons)));
+    stage.setScene(new Scene(createLayout(screen, memoryScreen, buttons)));
     stage.show();
   }
 
-  private VBox createLayout(Label errorLabel, TextField screen, TextField memoryScreen, TilePane buttons) {
+  private VBox createLayout(TextField screen, TextField memoryScreen, TilePane buttons) {
     final VBox layout = new VBox(20);
     layout.setAlignment(Pos.CENTER);
     layout.setStyle("-fx-background-color: grey; -fx-padding: 20; -fx-font-size: 20;");
-    layout.getChildren().setAll(errorLabel, screen, memoryScreen, buttons);
+    layout.getChildren().setAll(screen, memoryScreen, buttons);
     handleAccelerators(layout);
     screen.prefWidthProperty().bind(buttons.widthProperty());
     return layout;
@@ -82,7 +80,7 @@ public class Calculator extends Application {
     screen.setStyle("-fx-background-color: aquamarine;");
     screen.setAlignment(Pos.CENTER_RIGHT);
     screen.setEditable(false);
-    screen.textProperty().bind(Bindings.format("%.0f", value));
+    screen.textProperty().bind(value);
     return screen;
   }
   
@@ -91,7 +89,7 @@ public class Calculator extends Application {
 	    screen.setStyle("-fx-background-color: pink;");
 	    screen.setAlignment(Pos.BASELINE_LEFT);
 	    screen.setEditable(false);
-	    screen.textProperty().bind(Bindings.format("%.0f", memoryValue));
+	    screen.textProperty().bind(memoryValue);
 	    return screen;
 	  }
 
@@ -110,13 +108,13 @@ public class Calculator extends Application {
   private Button createButton(final String buttonIcon) {
     Button button = standardButton(buttonIcon);
 
-    if (buttonIcon.matches("[0-9]")) 
+    if (buttonIcon.matches("[0-9]")||buttonIcon.equals(".")) 
       numericButton(buttonIcon, button);
     else {
       final ObjectProperty<Op> operation = setOperator(buttonIcon);
       if (operation.get() != Op.NOOP) 
     	  operationButton(button, operation);
-      else if ("c".equals(buttonIcon)) 
+      else if ("C".equals(buttonIcon)) 
         clearButton(button);
       else if ("=".equals(buttonIcon)) 
         equalsButton(button);
@@ -152,7 +150,8 @@ public class Calculator extends Application {
     button.setStyle("-fx-base: lightgray;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
-      public void handle(ActionEvent actionEvent) {    	  
+      public void handle(ActionEvent actionEvent) {    	
+    	clearAfterEquals = false;
         curOp = triggerOp.get();
       }
     });
@@ -166,17 +165,20 @@ public class Calculator extends Application {
     return button;
   }
 
-  private void numericButton(final String s, Button button) {	 
+  private void numericButton(final String numericValue, Button button) {
 	    button.setOnAction(new EventHandler<ActionEvent>() {
 	      @Override
-	      public void handle(ActionEvent actionEvent) {
-	    	  errorLabel.setVisible(false);
-	        if (curOp == Op.NOOP) {
-	        	if(String.valueOf(value.get()).length() != 7)
-	        		value.set(value.get() * 10 + Integer.parseInt(s));
+	      public void handle(ActionEvent actionEvent) {   	    	
+	    	if(clearAfterEquals)  {
+	    		value.set("");
+	    		clearAfterEquals = false;
+	    	}
+	        if (curOp == Op.NOOP) {        		
+	        	value.set(value.get() + numericValue);     		
+	        		
 	        } else {
-	          stackValue.set(value.get());
-	          value.set(Integer.parseInt(s));
+	          stackValue.set(Float.valueOf(value.get()));
+	          value.set(numericValue);
 	          stackOp = curOp;
 	          curOp = Op.NOOP;
 	        }
@@ -189,24 +191,24 @@ public class Calculator extends Application {
     button.setOnAction(new EventHandler<ActionEvent>() {
       @Override
       public void handle(ActionEvent actionEvent) {
-    	errorLabel.setVisible(false);
-        value.set(0);
+        value.set("");
       }
     });
   }
 
-  private void equalsButton(Button button) {
+  private void equalsButton(Button button) {	
     button.setStyle("-fx-base: ghostwhite;");
     button.setOnAction(new EventHandler<ActionEvent>() {
       @SuppressWarnings("incomplete-switch")
       public void handle(ActionEvent actionEvent) {
+    	clearAfterEquals = true;
         switch (stackOp) {
           case ADD:      value.set(basicOperations.addFunction(stackValue.get(),value.get())); break;
           case SUBTRACT: value.set(basicOperations.subtractionFunction(stackValue.get(),value.get())); break;
           case MULTIPLY: value.set(basicOperations.mutlplicationFunction(stackValue.get(),value.get())); break;
           case DIVIDE:  
-        	  if(value.get() == 0) {
-        		  errorLabel.setVisible(true);
+        	  if(value.get().equals("0")) {
+        		  value.set("Error! Can not divide by 0!");
         		  break;
         	  }
         	  value.set(basicOperations.divisionFunction(stackValue.get(),value.get())); break;
@@ -220,7 +222,7 @@ public class Calculator extends Application {
 	    button.setOnAction(new EventHandler<ActionEvent>() {
 	      @Override
 	      public void handle(ActionEvent actionEvent) {
-	          memoryValue.set(basicOperations.mplusFunction(value.get()));
+	          memoryValue.set(String.valueOf(basicOperations.mplusFunction(Float.valueOf(value.get()))));
 	      }
 	    });
   }
@@ -230,7 +232,7 @@ public class Calculator extends Application {
 	    button.setOnAction(new EventHandler<ActionEvent>() {
 	      @Override
 	      public void handle(ActionEvent actionEvent) {
-	          memoryValue.set(basicOperations.mminiusFunction(value.get()));
+	          memoryValue.set(String.valueOf(basicOperations.mminiusFunction(Float.valueOf(value.get()))));
 	      }
 	    });
   }
@@ -240,7 +242,7 @@ public class Calculator extends Application {
 	    button.setOnAction(new EventHandler<ActionEvent>() {
 	      @Override
 	      public void handle(ActionEvent actionEvent) {
-	          memoryValue.set(basicOperations.mclearFunction());
+	          memoryValue.set(String.valueOf(basicOperations.mclearFunction()));
 	      }
 	    });
   }
@@ -250,7 +252,7 @@ public class Calculator extends Application {
 	    button.setOnAction(new EventHandler<ActionEvent>() {
 	      @Override
 	      public void handle(ActionEvent actionEvent) {
-	          memoryValue.set(basicOperations.msetFunction(value.get()));
+	          memoryValue.set(String.valueOf(basicOperations.msetFunction(Float.valueOf(value.get()))));
 	      }
 	    });
   }

@@ -4,20 +4,20 @@ public class BasicOperations {
 	
 	private Memory memory = new Memory();
 	
-	public float addFunction(float number, float additionNumber){
-		return (number + additionNumber);
+	public String addFunction(float number, String additionNumber){
+		return String.valueOf(Float.valueOf((number + Float.valueOf(additionNumber))));
 	}
 	
-	public float subtractionFunction(float number, float subtractionNumber){
-		return (number - subtractionNumber);
+	public String subtractionFunction(float number, String subtractionNumber){
+		return String.valueOf(Float.valueOf((number - Float.valueOf(subtractionNumber))));
 	}
 	
-	public float mutlplicationFunction(float number, float muplicationNumber){
-		return (number * muplicationNumber);
+	public String mutlplicationFunction(float number, String muplicationNumber){
+		return String.valueOf(Float.valueOf((number * Float.valueOf(muplicationNumber))));
 	}
 	
-	public float divisionFunction(float number, float divisionNumber){
-		return (number / divisionNumber);
+	public String divisionFunction(float number, String divisionNumber){
+		return String.valueOf(Float.valueOf((number / Float.valueOf(divisionNumber))));
 	}
 	
 	public float mplusFunction(float number){
