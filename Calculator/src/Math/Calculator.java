@@ -33,6 +33,7 @@ public class Calculator extends Application {
   private StringProperty memoryValue = new SimpleStringProperty();
   
   private enum Op { NOOP, ADD, SUBTRACT, MULTIPLY, DIVIDE }
+  private enum Opm { M, MC, MPlus, MMinus }
   private Op curOp   = Op.NOOP;
   private Op stackOp = Op.NOOP;
   
@@ -207,7 +208,7 @@ public class Calculator extends Application {
           case SUBTRACT: value.set(basicOperations.subtractionFunction(stackValue.get(),value.get())); break;
           case MULTIPLY: value.set(basicOperations.mutlplicationFunction(stackValue.get(),value.get())); break;
           case DIVIDE:  
-        	  if(value.get().equals("0")) {
+        	  if(value.get().substring(0, 1).equals("0")) {
         		  value.set("Error! Can not divide by 0!");
         		  break;
         	  }
